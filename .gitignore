@@ -1,0 +1,19 @@
+# env / secrets
+.env
+*.local
+
+# crawl artifacts (raw HTML + extracted JSON, regenerable)
+data/raw/
+logs/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# locks
+*.lock
+.idea

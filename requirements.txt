@@ -1,0 +1,19 @@
+# Knowledge graph
+graphiti-core==0.29.2
+neo4j>=5.20,<6
+
+# MCP server — pinned: mcp>=1.9 pulls pyjwt[crypto]->cryptography, which has no
+# prebuilt wheel for Python 3.14 (source build needs Rust and currently fails).
+# 1.2.0 ships FastMCP and installs clean. Bump once 3.14 cryptography wheels exist.
+mcp==1.2.0
+
+# Crawl + parse
+httpx>=0.27
+selectolax>=0.3.21
+
+# Config
+python-dotenv>=1.0
+PyYAML>=6.0
+
+# Embeddings/LLM go through Ollama's OpenAI-compatible endpoint (no SDK pin needed);
+# graphiti-core already brings the openai client it uses internally.

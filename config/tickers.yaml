@@ -1,0 +1,143 @@
+# Universe = listed Vietnamese banks. `aliases` seed the name->ticker resolver
+# (the crawler enriches them with names found on CafeF/Vietstock). `website` is the
+# company IR page crawled in addition to the aggregators. Keep aliases lowercase-ish;
+# the resolver normalises (lowercase + strip diacritics) before matching.
+
+companies:
+  - ticker: VCB
+    name: "Ngân hàng TMCP Ngoại thương Việt Nam"
+    aliases: ["Vietcombank", "Ngoai thuong", "NH Ngoai thuong", "Joint Stock Commercial Bank for Foreign Trade of Vietnam"]
+    website: "https://www.vietcombank.com.vn/vi-VN/NHHN/Quan-he-co-dong"
+    cafef_url: "https://s.cafef.vn/hose/VCB-ngan-hang-thuong-mai-co-phan-ngoai-thuong-viet-nam.chn"
+    exchange: HOSE
+
+  - ticker: BID
+    name: "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam"
+    aliases: ["BIDV", "Dau tu va Phat trien", "Bank for Investment and Development of Vietnam"]
+    website: "https://www.bidv.com.vn/vn/quan-he-nha-dau-tu"
+    exchange: HOSE
+
+  - ticker: CTG
+    name: "Ngân hàng TMCP Công Thương Việt Nam"
+    aliases: ["VietinBank", "Cong Thuong", "Vietnam Joint Stock Commercial Bank for Industry and Trade"]
+    website: "https://investor.vietinbank.vn/"
+    exchange: HOSE
+
+  - ticker: TCB
+    name: "Ngân hàng TMCP Kỹ Thương Việt Nam"
+    aliases: ["Techcombank", "Ky Thuong"]
+    website: "https://techcombank.com/nha-dau-tu"
+    exchange: HOSE
+
+  - ticker: MBB
+    name: "Ngân hàng TMCP Quân Đội"
+    aliases: ["MB Bank", "MBBank", "Quan Doi", "Military Commercial Joint Stock Bank"]
+    website: "https://www.mbbank.com.vn/gioi-thieu/quan-he-co-dong"
+    exchange: HOSE
+
+  - ticker: ACB
+    name: "Ngân hàng TMCP Á Châu"
+    aliases: ["A Chau", "Asia Commercial Bank"]
+    website: "https://acb.com.vn/quan-he-co-dong"
+    exchange: HOSE
+
+  - ticker: VPB
+    name: "Ngân hàng TMCP Việt Nam Thịnh Vượng"
+    aliases: ["VPBank", "Viet Nam Thinh Vuong"]
+    website: "https://www.vpbank.com.vn/quan-he-co-dong"
+    exchange: HOSE
+
+  - ticker: STB
+    name: "Ngân hàng TMCP Sài Gòn Thương Tín"
+    aliases: ["Sacombank", "Sai Gon Thuong Tin"]
+    exchange: HOSE
+
+  - ticker: HDB
+    name: "Ngân hàng TMCP Phát triển TP.HCM"
+    aliases: ["HDBank", "Phat trien TPHCM"]
+    exchange: HOSE
+
+  - ticker: SHB
+    name: "Ngân hàng TMCP Sài Gòn - Hà Nội"
+    aliases: ["Sai Gon Ha Noi"]
+    exchange: HOSE
+
+  - ticker: VIB
+    name: "Ngân hàng TMCP Quốc tế Việt Nam"
+    aliases: ["Quoc te", "Vietnam International Bank"]
+    exchange: HOSE
+
+  - ticker: TPB
+    name: "Ngân hàng TMCP Tiên Phong"
+    aliases: ["TPBank", "Tien Phong"]
+    exchange: HOSE
+
+  - ticker: MSB
+    name: "Ngân hàng TMCP Hàng Hải Việt Nam"
+    aliases: ["Maritime Bank", "Hang Hai"]
+    exchange: HOSE
+
+  - ticker: OCB
+    name: "Ngân hàng TMCP Phương Đông"
+    aliases: ["Phuong Dong", "Orient Commercial Bank"]
+    exchange: HOSE
+
+  - ticker: EIB
+    name: "Ngân hàng TMCP Xuất Nhập Khẩu Việt Nam"
+    aliases: ["Eximbank", "Xuat Nhap Khau"]
+    exchange: HOSE
+
+  - ticker: LPB
+    name: "Ngân hàng TMCP Lộc Phát Việt Nam"
+    aliases: ["LPBank", "Loc Phat", "Buu dien Lien Viet", "LienVietPostBank"]
+    exchange: HOSE
+
+  - ticker: SSB
+    name: "Ngân hàng TMCP Đông Nam Á"
+    aliases: ["SeABank", "Dong Nam A"]
+    exchange: HOSE
+
+  - ticker: NAB
+    name: "Ngân hàng TMCP Nam Á"
+    aliases: ["Nam A Bank", "Nam A"]
+    exchange: HOSE
+
+  - ticker: ABB
+    name: "Ngân hàng TMCP An Bình"
+    aliases: ["ABBANK", "An Binh"]
+    exchange: UPCOM
+
+  - ticker: BAB
+    name: "Ngân hàng TMCP Bắc Á"
+    aliases: ["Bac A Bank", "Bac A"]
+    exchange: HNX
+
+  - ticker: VAB
+    name: "Ngân hàng TMCP Việt Á"
+    aliases: ["VietABank", "Viet A"]
+    exchange: UPCOM
+
+  - ticker: NVB
+    name: "Ngân hàng TMCP Quốc Dân"
+    aliases: ["NCB", "Quoc Dan"]
+    exchange: HNX
+
+  - ticker: PGB
+    name: "Ngân hàng TMCP Xăng dầu Petrolimex"
+    aliases: ["PGBank", "Xang dau Petrolimex"]
+    exchange: UPCOM
+
+  - ticker: SGB
+    name: "Ngân hàng TMCP Sài Gòn Công Thương"
+    aliases: ["Saigonbank", "Sai Gon Cong Thuong"]
+    exchange: UPCOM
+
+  - ticker: BVB
+    name: "Ngân hàng TMCP Bản Việt"
+    aliases: ["BVBank", "Ban Viet", "Viet Capital Bank"]
+    exchange: UPCOM
+
+  - ticker: KLB
+    name: "Ngân hàng TMCP Kiên Long"
+    aliases: ["KienlongBank", "Kien Long"]
+    exchange: UPCOM

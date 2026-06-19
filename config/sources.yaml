@@ -1,0 +1,28 @@
+# Crawl source templates. {ticker} is substituted (upper-case mã sàn).
+#
+# NOTE: these public pages change layout often and some are JS-rendered (httpx gets
+# only server-delivered HTML). The pipeline is deliberately tolerant: crawl grabs
+# whatever text it can, Claude (extract.py) does the heavy parsing. Unreachable /
+# thin pages are warnings, never fatal. Verify/adjust URLs per site as needed; a
+# headless-browser fetcher can be added later behind the same `kind` keys.
+
+sources:
+  # Vietstock = primary. Clean {ticker} URLs, server-rendered, rich (board/shareholders/
+  # subsidiaries). Verified working.
+  vietstock:
+    enabled: true
+    pages:
+      profile:      "https://finance.vietstock.vn/{ticker}/ho-so-doanh-nghiep.htm"
+      shareholders: "https://finance.vietstock.vn/{ticker}/co-dong-lon.htm"
+      officers:     "https://finance.vietstock.vn/{ticker}/ban-lanh-dao.htm"
+      subsidiaries: "https://finance.vietstock.vn/{ticker}/cong-ty-con.htm"
+
+  # CafeF profile URLs need a per-company slug
+  # (e.g. https://s.cafef.vn/hose/VCB-ngan-hang-...-viet-nam.chn) which can't be derived
+  # generically, so they are taken from `cafef_url` in tickers.yaml and skipped if absent.
+  cafef:
+    enabled: true
+
+  # Per-company official IR pages are declared inline in tickers.yaml (`website`).
+  website:
+    enabled: true

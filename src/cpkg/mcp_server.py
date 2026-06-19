@@ -207,10 +207,22 @@ async def _search(query: str, limit: int) -> list[dict]:
 
 
 def main():
+    import os
+    import sys
+
     if _cfg.missing:
-        import sys
         print(f"missing env: {_cfg.missing} (env file: {_cfg.env_file})", file=sys.stderr)
-    mcp.run()  # stdio transport
+
+    # Transport: "stdio" (default; client spawns this process) or "sse" (host as a
+    # network service clients connect to at http://<host>:<port>/sse). mcp==1.2.0
+    # only ships these two — there is no streamable-http on this pin.
+    transport = os.getenv("MCP_TRANSPORT", "stdio")
+    if transport == "sse":
+        mcp.settings.host = os.getenv("MCP_HOST", "0.0.0.0")
+        mcp.settings.port = int(os.getenv("MCP_PORT", "8000"))
+        print(f"serving MCP over SSE at http://{mcp.settings.host}:{mcp.settings.port}/sse",
+              file=sys.stderr)
+    mcp.run(transport=transport)
 
 
 if __name__ == "__main__":

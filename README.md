@@ -55,6 +55,31 @@ bash bin/daily_update.sh                     # all tickers (cron entry)
 
 Schedule daily: see `bin/daily_update.sh` header (macOS launchd plist + crontab line).
 
+## Review UI
+
+Inspect every layer the pipeline produces — per ticker & run — in the browser:
+
+```bash
+bash bin/review.sh                       # http://127.0.0.1:8765
+bash bin/review.sh --port 9000 --host 0.0.0.0
+```
+
+Zero extra deps (stdlib `http.server`), read-only. Pick a ticker + run, then step
+through the four stages side by side:
+
+- **Crawl** — each crawled page (`data/raw/<ticker>/<date>/*.html`), toggling between
+  the stripped text fed to Claude and the raw HTML.
+- **Extract** — `extraction.json` rendered as structured sections (profile, governance,
+  figures, `needs_confirm`, sources) plus a raw-JSON view.
+- **Tier-1** — the Neo4j snapshot (Company + CrawlRun history, Figures, Subsidiaries,
+  Shareholders, Officers, Dividends, InsiderDeals, AuditFirm).
+- **Tier-2** — Graphiti episodes, extracted entities, and temporal facts (current vs
+  superseded).
+
+The filesystem layers (Crawl/Extract) work offline; the Neo4j layers (Tier-1/Tier-2)
+degrade to an inline error if the DB is unreachable — the Neo4j pill in the header
+shows live connectivity.
+
 ## MCP
 
 Start it: `PYTHONPATH=src python -m cpkg.mcp_server` (stdio).

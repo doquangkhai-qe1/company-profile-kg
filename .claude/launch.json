@@ -12,6 +12,16 @@
         "MCP_HOST": "0.0.0.0",
         "MCP_PORT": "8000"
       }
+    },
+    {
+      "name": "cpkg-review-ui",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["-m", "cpkg.review_app"],
+      "port": 8765,
+      "autoPort": true,
+      "env": {
+        "PYTHONPATH": "src"
+      }
     }
   ]
 }

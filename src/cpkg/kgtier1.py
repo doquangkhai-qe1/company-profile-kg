@@ -35,10 +35,13 @@ DDL = [
 def connect(cfg: Config):
     from neo4j import GraphDatabase
 
+    from .config import neo4j_security_kwargs
+
     driver = GraphDatabase.driver(
         cfg.neo4j_uri, auth=(cfg.neo4j_user, cfg.neo4j_password),
         connection_timeout=CONNECT_TIMEOUT_S, max_connection_lifetime=60,
         notifications_min_severity="OFF",
+        **neo4j_security_kwargs(cfg),
     )
     driver.verify_connectivity()
     return driver

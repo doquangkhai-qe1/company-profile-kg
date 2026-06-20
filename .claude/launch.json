@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cpkg-mcp-server (SSE)",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["-m", "cpkg.mcp_server"],
+      "port": 8000,
+      "env": {
+        "PYTHONPATH": "src",
+        "MCP_TRANSPORT": "sse",
+        "MCP_HOST": "0.0.0.0",
+        "MCP_PORT": "8000"
+      }
+    }
+  ]
+}

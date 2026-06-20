@@ -78,16 +78,57 @@ EXTRACTION_INSTRUCTIONS = (
 # ── factory ──────────────────────────────────────────────────────────────────
 
 def build_graphiti(cfg: Config):
-    """Construct a Graphiti instance wired for Ollama LLM + embedder. No network calls."""
+    """Construct a Graphiti instance: switchable LLM provider + Ollama embedder.
+
+    The LLM is chosen by cfg.llm_provider (openai | anthropic | claude_code); see
+    _build_llm_client. Embeddings always go through the OpenAI-compatible (Ollama)
+    endpoint — neither Anthropic nor Claude Code expose embeddings. No network calls here.
+    """
     from graphiti_core import Graphiti
     from graphiti_core.cross_encoder.client import CrossEncoderClient
     from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
-    from graphiti_core.llm_client.config import LLMConfig
-    from graphiti_core.llm_client.openai_generic_client import OpenAIGenericClient
 
     class NoopCrossEncoder(CrossEncoderClient):
         async def rank(self, query: str, passages: list[str]) -> list[tuple[str, float]]:
             return [(p, 1.0) for p in passages]
+
+    embedder = OpenAIEmbedder(config=OpenAIEmbedderConfig(
+        embedding_model=cfg.embed_model, api_key="ollama",
+        base_url=cfg.ollama_base_url, embedding_dim=cfg.embed_dim))
+    return Graphiti(graph_driver=_neo4j_graph_driver(cfg),
+                    llm_client=_build_llm_client(cfg), embedder=embedder,
+                    cross_encoder=NoopCrossEncoder(),
+                    max_coroutines=cfg.semaphore_limit)
+
+
+# ── LLM provider dispatch (openai | anthropic | claude_code) ──────────────────
+
+def _build_llm_client(cfg: Config):
+    """Pick the Tier-2 LLM client by cfg.llm_provider. Models map by size:
+    ModelSize.small → cfg.llm_small_model, medium → cfg.llm_model (Haiku+Sonnet mix)."""
+    from graphiti_core.llm_client.config import LLMConfig
+
+    provider = (cfg.llm_provider or "openai").lower()
+
+    if provider == "claude_code":
+        return _build_claude_code_client(cfg)
+
+    if provider == "anthropic":
+        try:
+            from graphiti_core.llm_client.anthropic_client import AnthropicClient
+        except ImportError as e:  # the anthropic extra isn't installed
+            raise RuntimeError(
+                "LLM_PROVIDER=anthropic requires the anthropic SDK: "
+                "pip install 'graphiti-core[anthropic]'") from e
+        import os
+        api_key = cfg.llm_api_key if cfg.llm_api_key != "ollama" else os.environ.get(
+            "ANTHROPIC_API_KEY", "")
+        return AnthropicClient(config=LLMConfig(
+            api_key=api_key, model=cfg.llm_model, small_model=cfg.llm_small_model,
+            temperature=0, max_tokens=cfg.llm_max_tokens))
+
+    # default: any OpenAI-compatible endpoint (local Ollama or api.openai.com)
+    from graphiti_core.llm_client.openai_generic_client import OpenAIGenericClient
 
     class ClampedGenericClient(OpenAIGenericClient):
         """Clamp max_tokens from every call site.
@@ -104,19 +145,133 @@ def build_graphiti(cfg: Config):
             return await super().generate_response(
                 messages, response_model=response_model, max_tokens=mt, **kwargs)
 
-    llm = ClampedGenericClient(
-        config=LLMConfig(api_key="ollama", model=cfg.ollama_llm_model,
-                         base_url=cfg.ollama_base_url, temperature=0,
-                         max_tokens=cfg.llm_max_tokens),
+    return ClampedGenericClient(
+        config=LLMConfig(api_key=cfg.llm_api_key, model=cfg.llm_model,
+                         small_model=cfg.llm_small_model, base_url=cfg.llm_base_url,
+                         temperature=0, max_tokens=cfg.llm_max_tokens),
         max_tokens=cfg.llm_max_tokens,
         structured_output_mode="json_object")
-    embedder = OpenAIEmbedder(config=OpenAIEmbedderConfig(
-        embedding_model=cfg.embed_model, api_key="ollama",
-        base_url=cfg.ollama_base_url, embedding_dim=cfg.embed_dim))
-    return Graphiti(cfg.neo4j_uri, cfg.neo4j_user, cfg.neo4j_password,
-                    llm_client=llm, embedder=embedder,
-                    cross_encoder=NoopCrossEncoder(),
-                    max_coroutines=cfg.semaphore_limit)
+
+
+def _strip_fences(s: str) -> str:
+    """Drop a leading/trailing ```json … ``` fence some models add around JSON."""
+    s = (s or "").strip()
+    if s.startswith("```"):
+        s = s.split("\n", 1)[1] if "\n" in s else s[3:]
+        if s.lstrip().startswith("json"):
+            s = s.lstrip()[4:]
+    if s.endswith("```"):
+        s = s[: s.rfind("```")]
+    return s.strip()
+
+
+_CLAUDE_JSON_SYSTEM = (
+    "You are a strict JSON generation engine. Output exactly one valid JSON value "
+    "that satisfies the schema described in the user message. Return raw JSON only: "
+    "no prose, no explanation, no markdown code fences, and do not use any tools.")
+
+
+def _log_llm_cost(model: str, wrapper: dict) -> None:
+    """Append one claude CLI call's cost+token usage to logs/llm_cost.jsonl.
+
+    The CLI's --output-format json wrapper carries total_cost_usd (API-equivalent;
+    $0 marginal under a Max plan) and a usage block. Best-effort: never raises.
+    """
+    try:
+        import json
+        import os
+        from datetime import datetime, timezone
+
+        from .config import REPO_ROOT
+
+        usage = wrapper.get("usage") or {}
+        rec = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "tag": os.environ.get("CPKG_COST_TAG", ""),  # set per-ticker by the runner
+            "model": model,
+            "cost_usd": wrapper.get("total_cost_usd"),
+            "duration_ms": wrapper.get("duration_ms"),
+            "input_tokens": usage.get("input_tokens"),
+            "output_tokens": usage.get("output_tokens"),
+            "cache_read_input_tokens": usage.get("cache_read_input_tokens"),
+            "cache_creation_input_tokens": usage.get("cache_creation_input_tokens"),
+        }
+        log_dir = REPO_ROOT / "logs"
+        log_dir.mkdir(exist_ok=True)
+        with open(log_dir / "llm_cost.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+def _build_claude_code_client(cfg: Config):
+    """Graphiti LLM client backed by the `claude` CLI (Claude Code).
+
+    Covered by the Max plan — no API key, runs locally. Each call shells out to
+    `claude -p … --output-format json` in a worker thread. ModelSize.small uses
+    cfg.llm_small_model (e.g. Haiku); medium uses cfg.llm_model (e.g. Sonnet).
+
+    `--system-prompt` fully replaces Claude Code's default (agentic) prompt with a
+    strict "JSON engine" instruction so the CLI returns raw JSON, not prose/tool use.
+    Defined as a factory so graphiti_core stays a lazy import (matches build_graphiti).
+    """
+    from graphiti_core.llm_client.client import LLMClient
+    from graphiti_core.llm_client.config import LLMConfig, ModelSize
+
+    class ClaudeCodeLLMClient(LLMClient):
+        def __init__(self):
+            super().__init__(LLMConfig(model=cfg.llm_model, small_model=cfg.llm_small_model,
+                                       temperature=0, max_tokens=cfg.llm_max_tokens),
+                             cache=False)
+            self._bin = cfg.claude_bin
+            self._timeout = cfg.claude_timeout_s
+            self._model = cfg.llm_model
+            self._small_model = cfg.llm_small_model or cfg.llm_model
+
+        async def _generate_response(self, messages, response_model=None,
+                                     max_tokens=16384, model_size=ModelSize.medium):
+            import asyncio
+            import json
+            import subprocess
+
+            model = self._small_model if model_size == ModelSize.small else self._model
+            prompt = "\n\n".join(
+                m.content for m in messages if getattr(m, "content", None))
+            cmd = [self._bin, "-p", prompt, "--output-format", "json",
+                   "--model", model, "--system-prompt", _CLAUDE_JSON_SYSTEM]
+            proc = await asyncio.to_thread(
+                subprocess.run, cmd, capture_output=True, text=True, timeout=self._timeout)
+            if proc.returncode != 0:
+                raise RuntimeError(f"claude CLI rc={proc.returncode}: {proc.stderr[:300]}")
+            wrapper = json.loads(proc.stdout)  # --output-format json wraps the reply
+            text = wrapper.get("result", "") if isinstance(wrapper, dict) else ""
+            if not text:
+                raise RuntimeError(f"claude CLI returned empty result: {str(wrapper)[:200]}")
+            _log_llm_cost(model, wrapper)
+            return json.loads(_strip_fences(text))
+
+    return ClaudeCodeLLMClient()
+
+
+def _neo4j_graph_driver(cfg: Config):
+    """Graphiti's Neo4jDriver, but with TLS pinned to cfg.neo4j_tls_cert when set.
+
+    Graphiti builds its async driver internally with no TLS hook, so we swap in a
+    driver carrying our security kwargs. When no cert is configured the kwargs are
+    empty and this is equivalent to Graphiti's default wiring.
+    """
+    from graphiti_core.driver.neo4j_driver import Neo4jDriver
+    from neo4j import AsyncGraphDatabase
+
+    from .config import neo4j_security_kwargs
+
+    gd = Neo4jDriver(cfg.neo4j_uri, cfg.neo4j_user, cfg.neo4j_password,
+                     database=cfg.neo4j_database)
+    sec = neo4j_security_kwargs(cfg)
+    if sec:
+        gd.client = AsyncGraphDatabase.driver(
+            cfg.neo4j_uri, auth=(cfg.neo4j_user, cfg.neo4j_password), **sec)
+    return gd
 
 
 # ── episode builders ─────────────────────────────────────────────────────────

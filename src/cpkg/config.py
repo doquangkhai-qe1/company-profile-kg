@@ -35,9 +35,23 @@ class Config:
     neo4j_user: str = "neo4j"
     neo4j_password: str = ""
     neo4j_database: str = "neo4j"
-    # Graphiti tier-2 (Ollama, OpenAI-compatible)
+    # Path to a custom CA / server cert (PEM) to trust for TLS. "" = no TLS override.
+    # Relative paths resolve against the repo root. Only applied for unencrypted
+    # URI schemes (bolt:// / neo4j://); the +s/+ssc schemes configure TLS themselves.
+    neo4j_tls_cert: str = ""
+    # Graphiti tier-2 LLM provider (switchable): openai | anthropic | claude_code
+    #   openai      → any OpenAI-compatible endpoint (local Ollama OR api.openai.com)
+    #   anthropic   → Anthropic API (needs ANTHROPIC_API_KEY + the [anthropic] extra; paid)
+    #   claude_code → the `claude` CLI, covered by the Max plan (no API key, runs local)
+    llm_provider: str = "openai"
+    llm_model: str = "qwen2.5:7b"      # main/medium-size model
+    llm_small_model: str = ""          # light calls (dedup); falls back to llm_model
+    llm_base_url: str = "http://localhost:11434/v1"  # openai provider only
+    llm_api_key: str = "ollama"        # openai provider; anthropic reads ANTHROPIC_API_KEY
+    # Embeddings always go through an OpenAI-compatible endpoint (Ollama) — neither the
+    # Anthropic API nor Claude Code expose an embeddings endpoint.
     ollama_base_url: str = "http://localhost:11434/v1"
-    ollama_llm_model: str = "qwen2.5:7b"
+    ollama_llm_model: str = "qwen2.5:7b"  # legacy; kept as a fallback for llm_model
     embed_model: str = "bge-m3"
     embed_dim: int = 1024
     llm_max_tokens: int = 2048
@@ -85,6 +99,14 @@ def load_config() -> Config:
         neo4j_user=os.environ.get("NEO4J_USER", Config.neo4j_user),
         neo4j_password=os.environ.get("NEO4J_PASSWORD", ""),
         neo4j_database=os.environ.get("NEO4J_DATABASE", Config.neo4j_database),
+        neo4j_tls_cert=os.environ.get("NEO4J_TLS_CERT", Config.neo4j_tls_cert),
+        llm_provider=os.environ.get("LLM_PROVIDER", Config.llm_provider),
+        llm_model=os.environ.get(
+            "LLM_MODEL", os.environ.get("OLLAMA_LLM_MODEL", Config.llm_model)),
+        llm_small_model=os.environ.get("LLM_SMALL_MODEL", Config.llm_small_model),
+        llm_base_url=os.environ.get(
+            "LLM_BASE_URL", os.environ.get("OLLAMA_BASE_URL", Config.llm_base_url)),
+        llm_api_key=os.environ.get("LLM_API_KEY", Config.llm_api_key),
         ollama_base_url=os.environ.get("OLLAMA_BASE_URL", Config.ollama_base_url),
         ollama_llm_model=os.environ.get("OLLAMA_LLM_MODEL", Config.ollama_llm_model),
         embed_model=os.environ.get("EMBED_MODEL", Config.embed_model),
@@ -102,9 +124,35 @@ def load_config() -> Config:
         sources_file=os.environ.get("SOURCES_FILE", str(REPO_ROOT / "config" / "sources.yaml")),
         env_file=env_file,
     )
+    if not cfg.llm_small_model:
+        cfg.llm_small_model = cfg.llm_model
     os.environ.setdefault("SEMAPHORE_LIMIT", str(cfg.semaphore_limit))
     cfg.missing = cfg.require("neo4j_password")
     return cfg
+
+
+def neo4j_security_kwargs(cfg: Config) -> dict:
+    """TLS kwargs for the neo4j driver, derived from cfg.neo4j_tls_cert.
+
+    When a custom cert is configured and the URI uses an unencrypted scheme
+    (bolt:// / neo4j://), enable encryption and pin trust to that cert. The
+    +s/+ssc schemes already configure TLS, so passing these kwargs would raise —
+    return nothing in that case. Returns {} when no cert is set.
+    """
+    cert = (cfg.neo4j_tls_cert or "").strip()
+    if not cert:
+        return {}
+    scheme = cfg.neo4j_uri.split("://", 1)[0].lower()
+    if scheme not in ("bolt", "neo4j"):
+        return {}
+    p = Path(cert)
+    if not p.is_absolute():
+        p = REPO_ROOT / p
+    if not p.is_file():
+        raise FileNotFoundError(f"NEO4J_TLS_CERT not found: {p}")
+    from neo4j import TrustCustomCAs
+
+    return {"encrypted": True, "trusted_certificates": TrustCustomCAs(str(p))}
 
 
 # ── config file loaders ──────────────────────────────────────────────────────

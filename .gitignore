@@ -1,6 +1,7 @@
 # env / secrets
 .env
 *.local
+.claude/settings.local.json
 
 # crawl artifacts (raw HTML + extracted JSON, regenerable)
 data/raw/

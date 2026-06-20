@@ -1,7 +1,9 @@
-# Universe = listed Vietnamese banks. `aliases` seed the name->ticker resolver
-# (the crawler enriches them with names found on CafeF/Vietstock). `website` is the
-# company IR page crawled in addition to the aggregators. Keep aliases lowercase-ish;
-# the resolver normalises (lowercase + strip diacritics) before matching.
+# Universe = listed Vietnamese companies (banks + selected non-banks). `aliases` seed
+# the name->ticker resolver (the crawler enriches them with names found on CafeF/
+# Vietstock). `website` is the company IR page crawled in addition to the aggregators
+# (optional — Vietstock works off the {ticker} alone). `cafef_url` is optional (needs a
+# per-company slug). Keep aliases lowercase-ish; the resolver normalises (lowercase +
+# strip diacritics) before matching.
 
 companies:
   - ticker: VCB
@@ -141,3 +143,19 @@ companies:
     name: "Ngân hàng TMCP Kiên Long"
     aliases: ["KienlongBank", "Kien Long"]
     exchange: UPCOM
+
+  # ── Non-bank listed companies ───────────────────────────────────────────────
+  - ticker: FPT
+    name: "Công ty Cổ phần FPT"
+    aliases: ["FPT Corporation", "FPT Corp", "Tap doan FPT"]
+    exchange: HOSE
+
+  - ticker: VHM
+    name: "Công ty Cổ phần Vinhomes"
+    aliases: ["Vinhomes", "Vinhomes JSC"]
+    exchange: HOSE
+
+  - ticker: FRT
+    name: "Công ty Cổ phần Bán lẻ Kỹ thuật số FPT"
+    aliases: ["FPT Retail", "FPT Shop", "Ban le Ky thuat so FPT"]
+    exchange: HOSE

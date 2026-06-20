@@ -19,11 +19,13 @@ from .schema import Extraction
 
 
 class Company(BaseModel):
-    """A listed Vietnamese bank (subject or related), e.g. VCB, BID, CTG."""
+    """A listed Vietnamese company (subject or related), any sector — e.g. VCB
+    (bank), FPT (tech), VHM (real estate), FRT (retail)."""
 
 
 class Subsidiary(BaseModel):
-    """A subsidiary/associate: securities, leasing, insurance, AMC, remittance…"""
+    """A subsidiary/associate/member company in any sector (e.g. securities,
+    insurance, real-estate project co, retail chain, tech/telecom unit)."""
 
 
 class Person(BaseModel):
@@ -31,19 +33,22 @@ class Person(BaseModel):
 
 
 class Shareholder(BaseModel):
-    """Institutional/strategic shareholders: NHNN, Mizuho, MUFG, SCIC, funds."""
+    """Institutional/strategic shareholders: state holders (SCIC, NHNN),
+    strategic partners, funds, parent/founding groups."""
 
 
 class BusinessSegment(BaseModel):
-    """Customer/segment lines: bán buôn, bán lẻ, SME, treasury, digital."""
+    """Business/customer/segment lines (sector-specific): e.g. bán buôn, bán lẻ,
+    SME, treasury, bất động sản, công nghệ, viễn thông, phân phối."""
 
 
 class StrategyTarget(BaseModel):
-    """Disclosed targets/vision: ROE/NIM/CASA/CAR goals, top-rank ambitions."""
+    """Disclosed targets/vision: doanh thu/lợi nhuận/ROE/thị phần goals,
+    top-rank ambitions (e.g. ROE/NIM/CASA for banks)."""
 
 
 class CapitalAction(BaseModel):
-    """Capital actions: phát hành riêng lẻ, cổ tức cổ phiếu, tăng vốn điều lệ."""
+    """Capital actions: phát hành riêng lẻ, cổ tức cổ phiếu, tăng vốn điều lệ, M&A."""
 
 
 class AuditFirm(BaseModel):
@@ -55,7 +60,8 @@ class RelatedParty(BaseModel):
 
 
 class GovernmentBody(BaseModel):
-    """Regulators/state bodies: NHNN (SBV), Bộ Tài chính, Chính phủ."""
+    """Regulators/state bodies: NHNN (SBV), UBCKNN (State Securities Commission),
+    Bộ Tài chính, HOSE/HNX, Chính phủ."""
 
 
 ENTITY_TYPES = {
@@ -67,11 +73,13 @@ ENTITY_TYPES = {
 }
 
 EXTRACTION_INSTRUCTIONS = (
-    "Domain: Vietnamese listed-bank company profile + governance. Glossary: NHNN = "
-    "Ngân hàng Nhà nước = State Bank of Vietnam (GovernmentBody); 3-letter uppercase "
-    "codes (VCB, BID, CTG, TCB, MBB...) are listed banks (Company); Vietcombank=VCB, "
-    "BIDV=BID, Vietinbank=CTG, Techcombank=TCB. HĐQT=board, BĐH=management, BKS=supervisory "
-    "board. Keep facts in Vietnamese as written. Numbers: tỷ đồng = billion VND."
+    "Domain: Vietnamese listed-company profile + governance, ANY sector (banking, "
+    "real estate, retail, technology, manufacturing...). Glossary: 3-letter uppercase "
+    "codes (VCB, FPT, VHM, FRT, BID...) are listed companies (Company); Vietcombank=VCB, "
+    "FPT=FPT, Vinhomes=VHM, FPT Retail=FRT. NHNN = Ngân hàng Nhà nước = State Bank of "
+    "Vietnam, UBCKNN = State Securities Commission (GovernmentBody). HĐQT=board, "
+    "BĐH=management, BKS=supervisory board. Keep facts in Vietnamese as written. "
+    "Numbers: tỷ đồng = billion VND."
 )
 
 
